@@ -3,6 +3,7 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler, LabelEncoder
 from sklearn.svm import SVC
+from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 from sklearn.metrics import accuracy_score
 
 # Load the data from GitHub
@@ -57,11 +58,18 @@ def preprocess_data(df):
 
     return df, label_encoders
 
-# Train the SVM model
-def train_model(X_train, y_train):
+# Train the model
+def train_model(X_train, y_train, model_type):
     scaler = StandardScaler()
     X_train_scaled = scaler.fit_transform(X_train)
-    model = SVC(kernel='linear', probability=True)
+    
+    if model_type == 'SVM':
+        model = SVC(kernel='linear', probability=True)
+    elif model_type == 'Random Forest Classifier':
+        model = RandomForestClassifier(n_estimators=100, random_state=42)
+    elif model_type == 'Random Forest Regressor':
+        model = RandomForestRegressor(n_estimators=100, random_state=42)
+
     model.fit(X_train_scaled, y_train)
     return model, scaler
 
@@ -80,14 +88,22 @@ X = data.drop('HeartDisease', axis=1)
 y = data['HeartDisease']
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
+# Model selection
+model_choice = st.selectbox('Choose a model', ['SVM', 'Random Forest Classifier', 'Random Forest Regressor'])
+
 # Train the model
-model, scaler = train_model(X_train, y_train)
+model, scaler = train_model(X_train, y_train, model_choice)
 
 # Make predictions
 X_test_scaled = scaler.transform(X_test)
 y_pred = model.predict(X_test_scaled)
-accuracy = accuracy_score(y_test, y_pred)
-st.write(f'Model Accuracy: {accuracy * 100:.2f}%')
+
+if model_choice == 'Random Forest Regressor':
+    # For regression, evaluate using a different metric
+    st.write(f'Predictions: {y_pred}')
+else:
+    accuracy = accuracy_score(y_test, y_pred)
+    st.write(f'Model Accuracy: {accuracy * 100:.2f}%')
 
 # Prediction section
 st.header('Predict Heart Disease')
@@ -125,12 +141,12 @@ input_data_scaled = scaler.transform(input_data)
 
 # Make prediction
 prediction = model.predict(input_data_scaled)
-prediction_proba = model.predict_proba(input_data_scaled)
 
-st.subheader('Prediction')
-if prediction[0] == 1:
-    st.write('The model predicts that the patient **has heart disease**.')
-else:
-    st.write('The model predicts that the patient **does not have heart disease**.')
-
-st.write(f'Probability of having heart disease: {prediction_proba[0][1] * 100:.2f}%')
+if model_choice != 'Random Forest Regressor':
+    prediction_proba = model.predict_proba(input_data_scaled)
+    st.subheader('Prediction')
+    if prediction[0] == 1:
+        st.write('The model predicts that the patient **has heart disease**.')
+    else:
+        st.write('The model predicts that the patient **does not have heart disease**.')
+    st.write(f'Probability of having heart disease: {prediction_proba[0][1] * 100:.2f}%')
