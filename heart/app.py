@@ -5,10 +5,16 @@ from sklearn.preprocessing import StandardScaler, LabelEncoder
 from sklearn.svm import SVC
 from sklearn.metrics import accuracy_score
 
-# Load the data
+
+# Load the data from GitHub
 @st.cache_data
 def load_data():
-    data = pd.read_csv('heart.csv')
+    url =   # Replace with your actual raw URL
+    data = pd.read_csv(url)
+    return data
+
+# Rest of your code remains the same...
+
   # Update the file path if needed
     return data
 
