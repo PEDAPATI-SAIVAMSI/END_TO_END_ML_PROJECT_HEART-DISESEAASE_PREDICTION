@@ -9,7 +9,7 @@ from sklearn.metrics import accuracy_score
 # Load the data from GitHub
 @st.cache_data
 def load_data():
-    url =   # Replace with your actual raw URL
+    url = 'https://github.com/PEDAPATI-SAIVAMSI/END_TO_END_ML_PROJECT_HEART-DISESEAASE_PREDICTION/blob/3b68175e7480cbc75a22999e386ce75bcbe60a8b/heart/heart.csv'  # Replace with your actual raw URL
     data = pd.read_csv(url)
     return data
 
