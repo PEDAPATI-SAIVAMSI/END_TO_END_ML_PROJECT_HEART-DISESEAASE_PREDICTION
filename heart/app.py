@@ -1,10 +1,9 @@
 import streamlit as st
 import pandas as pd
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler, LabelEncoder
-from sklearn.svm import SVC
-from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
-from sklearn.metrics import accuracy_score
+from sklearn.preprocessing import LabelEncoder
+from pycaret.classification import setup, compare_models, finalize_model, predict_model
+from pycaret.regression import setup as setup_regression, compare_models as compare_models_regression, finalize_model as finalize_model_regression, predict_model as predict_model_regression
 
 # Load the data from GitHub
 @st.cache_data
@@ -58,23 +57,8 @@ def preprocess_data(df):
 
     return df, label_encoders
 
-# Train the model
-def train_model(X_train, y_train, model_type):
-    scaler = StandardScaler()
-    X_train_scaled = scaler.fit_transform(X_train)
-    
-    if model_type == 'SVM':
-        model = SVC(kernel='linear', probability=True)
-    elif model_type == 'Random Forest Classifier':
-        model = RandomForestClassifier(n_estimators=100, random_state=42)
-    elif model_type == 'Random Forest Regressor':
-        model = RandomForestRegressor(n_estimators=100, random_state=42)
-
-    model.fit(X_train_scaled, y_train)
-    return model, scaler
-
 # Streamlit app
-st.title('Heart Disease Prediction')
+st.title('Heart Disease Prediction and Model Comparison')
 
 # Load and display data
 data = load_data()
@@ -89,21 +73,30 @@ y = data['HeartDisease']
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
 # Model selection
-model_choice = st.selectbox('Choose a model', ['SVM', 'Random Forest Classifier', 'Random Forest Regressor'])
+model_type = st.selectbox('Choose a model comparison method', ['PyCaret Classification', 'PyCaret Regression'])
 
-# Train the model
-model, scaler = train_model(X_train, y_train, model_choice)
+if model_type == 'PyCaret Classification':
+    # PyCaret Classification
+    st.write("Setting up PyCaret for Classification...")
+    clf_setup = setup(data, target='HeartDisease', session_id=42, silent=True, verbose=False)
+    best_model = compare_models()
+    finalized_model = finalize_model(best_model)
+    
+    # Make predictions
+    predictions = predict_model(finalized_model, data=X_test)
+    accuracy = (predictions['Label'] == y_test).mean()
+    st.write(f'Best Classification Model Accuracy: {accuracy * 100:.2f}%')
 
-# Make predictions
-X_test_scaled = scaler.transform(X_test)
-y_pred = model.predict(X_test_scaled)
-
-if model_choice == 'Random Forest Regressor':
-    # For regression, evaluate using a different metric
-    st.write(f'Predictions: {y_pred}')
-else:
-    accuracy = accuracy_score(y_test, y_pred)
-    st.write(f'Model Accuracy: {accuracy * 100:.2f}%')
+elif model_type == 'PyCaret Regression':
+    # If you want to use PyCaret for regression instead
+    st.write("Setting up PyCaret for Regression...")
+    reg_setup = setup_regression(data, target='HeartDisease', session_id=42, silent=True, verbose=False)
+    best_model_reg = compare_models_regression()
+    finalized_model_reg = finalize_model_reg(best_model_reg)
+    
+    # Make predictions
+    predictions_reg = predict_model_reg(finalized_model_reg, data=X_test)
+    st.write(f'Best Regression Model Predictions: {predictions_reg.head()}')
 
 # Prediction section
 st.header('Predict Heart Disease')
@@ -136,17 +129,17 @@ input_data = pd.DataFrame({
     'ST_Slope': [label_encoders['ST_Slope'].transform([st_slope])[0]]
 })
 
-# Scale the input data
-input_data_scaled = scaler.transform(input_data)
-
 # Make prediction
-prediction = model.predict(input_data_scaled)
-
-if model_choice != 'Random Forest Regressor':
-    prediction_proba = model.predict_proba(input_data_scaled)
+if model_type == 'PyCaret Classification':
+    prediction = predict_model(finalized_model, data=input_data)
     st.subheader('Prediction')
-    if prediction[0] == 1:
+    if prediction['Label'][0] == 1:
         st.write('The model predicts that the patient **has heart disease**.')
     else:
         st.write('The model predicts that the patient **does not have heart disease**.')
-    st.write(f'Probability of having heart disease: {prediction_proba[0][1] * 100:.2f}%')
+    st.write(f'Probability of having heart disease: {prediction["Score"][0] * 100:.2f}%')
+
+elif model_type == 'PyCaret Regression':
+    prediction_reg = predict_model_reg(finalized_model_reg, data=input_data)
+    st.subheader('Regression Prediction')
+    st.write(f'Predicted Value: {prediction_reg["Label"][0]}')
