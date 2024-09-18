@@ -30,7 +30,7 @@ def eda(data):
 
     st.write("Correlation Heatmap")
     plt.figure(figsize=(10, 8))
-    sns.heatmap(data.corr(), annot=True, cmap='coolwarm')
+    sns.heatmap(data.select_dtypes(include=['float64', 'int64']).corr(), annot=True, cmap='coolwarm')
     st.pyplot(plt)
 
 # Preprocess the data
@@ -96,6 +96,7 @@ st.text(classification_report(y_test, y_pred))
 # Confusion Matrix
 st.write("Confusion Matrix")
 cm = confusion_matrix(y_test, y_pred)
+plt.figure(figsize=(6, 4))
 sns.heatmap(cm, annot=True, fmt="d", cmap="Blues")
 st.pyplot(plt)
 
@@ -114,20 +115,30 @@ oldpeak = st.slider('Oldpeak', min_value=0.0, max_value=6.0, value=1.0)
 st_slope = st.selectbox('ST Slope', options=['Up', 'Flat', 'Down'])
 
 # Transform user input
-user_data = pd.DataFrame({
-    'Age': [age], 'Sex': [label_encoders['Sex'].transform([sex])[0]], 
-    'ChestPainType': [label_encoders['ChestPainType'].transform([chest_pain])[0]],
-    'RestingBP': [resting_bp], 'Cholesterol': [cholesterol],
-    'FastingBS': [fasting_bs], 'RestingECG': [label_encoders['RestingECG'].transform([resting_ecg])[0]], 
-    'MaxHR': [max_hr], 'ExerciseAngina': [label_encoders['ExerciseAngina'].transform([exercise_angina])[0]], 
-    'Oldpeak': [oldpeak], 'ST_Slope': [label_encoders['ST_Slope'].transform([st_slope])[0]]
-})
+try:
+    user_data = pd.DataFrame({
+        'Age': [age], 
+        'Sex': [label_encoders['Sex'].transform([sex])[0]], 
+        'ChestPainType': [label_encoders['ChestPainType'].transform([chest_pain])[0]],
+        'RestingBP': [resting_bp], 
+        'Cholesterol': [cholesterol],
+        'FastingBS': [fasting_bs], 
+        'RestingECG': [label_encoders['RestingECG'].transform([resting_ecg])[0]], 
+        'MaxHR': [max_hr], 
+        'ExerciseAngina': [label_encoders['ExerciseAngina'].transform([exercise_angina])[0]], 
+        'Oldpeak': [oldpeak], 
+        'ST_Slope': [label_encoders['ST_Slope'].transform([st_slope])[0]]
+    })
 
-user_data_scaled = scaler.transform(user_data)
+    user_data_scaled = scaler.transform(user_data)
 
-# Make prediction
-prediction = model.predict(user_data_scaled)
-if prediction[0] == 1:
-    st.write("The model predicts that the patient **has heart disease**.")
-else:
-    st.write("The model predicts that the patient **does not have heart disease**.")
+    # Make prediction
+    prediction = model.predict(user_data_scaled)
+    if prediction[0] == 1:
+        st.write("The model predicts that the patient **has heart disease**.")
+    else:
+        st.write("The model predicts that the patient **does not have heart disease**.")
+
+except KeyError as e:
+    st.error(f"Error in encoding input values: {e}")
+
