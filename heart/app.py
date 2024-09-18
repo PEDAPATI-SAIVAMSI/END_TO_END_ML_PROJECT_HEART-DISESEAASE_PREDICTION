@@ -11,9 +11,10 @@ from sklearn.metrics import accuracy_score, classification_report, confusion_mat
 # Load the dataset
 @st.cache_data
 def load_data():
-    url = 'https://www.kaggle.com/datasets/aizahzeeshan/heart-failure-dataset'
-    data = pd.read_csv('heart.csv')
+    url = 'https://raw.githubusercontent.com/PEDAPATI-SAIVAMSI/END_TO_END_ML_PROJECT_HEART-DISESEAASE_PREDICTION/main/heart/heart.csv'
+    data = pd.read_csv(url)
     return data
+
 
 # Exploratory Data Analysis (EDA)
 def eda(data):
