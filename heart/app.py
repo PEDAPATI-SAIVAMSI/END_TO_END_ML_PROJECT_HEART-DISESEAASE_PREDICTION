@@ -8,7 +8,8 @@ from sklearn.metrics import accuracy_score
 # Load the data
 @st.cache_data
 def load_data():
-    data = pd.read_csv(r"C:\Users\SAI VAMSI\Desktop\mlass1\venv\datasets\heart\heart.csv")  # Update the file path if needed
+    data = pd.read_csv('heart.csv')
+  # Update the file path if needed
     return data
 
 # Encode categorical columns with predefined categories
