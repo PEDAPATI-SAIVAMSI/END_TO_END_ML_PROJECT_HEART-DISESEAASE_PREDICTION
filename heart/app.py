@@ -1,10 +1,12 @@
 import streamlit as st
 import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler, LabelEncoder
 from sklearn.svm import SVC
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
-from sklearn.metrics import accuracy_score
+from sklearn.metrics import accuracy_score, classification_report, mean_squared_error, confusion_matrix
 
 # Load the data from GitHub
 @st.cache_data
@@ -23,9 +25,6 @@ def preprocess_data(df):
     # If missing values, fill them (replace 'M' with appropriate handling if needed)
     df['Sex'].fillna('M', inplace=True)
     
-    # Log unique values in 'Sex' column
-    st.write("Unique values in 'Sex':", df['Sex'].unique())
-
     # Encoding 'Sex' column
     le_sex = LabelEncoder()
     le_sex.fit(['M', 'F'])
@@ -73,12 +72,37 @@ def train_model(X_train, y_train, model_type):
     model.fit(X_train_scaled, y_train)
     return model, scaler
 
+# Evaluate the model
+def evaluate_model(y_test, y_pred, model_choice):
+    if model_choice == 'Random Forest Regressor':
+        mse = mean_squared_error(y_test, y_pred)
+        st.write(f'Mean Squared Error: {mse}')
+    else:
+        accuracy = accuracy_score(y_test, y_pred)
+        st.write(f'Accuracy: {accuracy * 100:.2f}%')
+        st.write("Classification Report:")
+        st.text(classification_report(y_test, y_pred))
+        
+        # Display confusion matrix
+        cm = confusion_matrix(y_test, y_pred)
+        plt.figure(figsize=(5, 4))
+        sns.heatmap(cm, annot=True, fmt="d", cmap="Blues", xticklabels=['No Disease', 'Disease'], yticklabels=['No Disease', 'Disease'])
+        plt.xlabel('Predicted')
+        plt.ylabel('Actual')
+        st.pyplot(plt)
+
 # Streamlit app
 st.title('Heart Disease Prediction')
 
 # Load and display data
 data = load_data()
 st.write('Dataset:', data.head())
+
+# Data visualization
+st.subheader("Data Distribution")
+plt.figure(figsize=(10, 6))
+sns.countplot(x='HeartDisease', data=data, palette='Set2')
+st.pyplot(plt)
 
 # Preprocess the data
 data, label_encoders = preprocess_data(data)
@@ -98,12 +122,8 @@ model, scaler = train_model(X_train, y_train, model_choice)
 X_test_scaled = scaler.transform(X_test)
 y_pred = model.predict(X_test_scaled)
 
-if model_choice == 'Random Forest Regressor':
-    # For regression, evaluate using a different metric
-    st.write(f'Predictions: {y_pred}')
-else:
-    accuracy = accuracy_score(y_test, y_pred)
-    st.write(f'Model Accuracy: {accuracy * 100:.2f}%')
+# Evaluate the model
+evaluate_model(y_test, y_pred, model_choice)
 
 # Prediction section
 st.header('Predict Heart Disease')
