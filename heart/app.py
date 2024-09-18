@@ -1,20 +1,21 @@
 import streamlit as st
 import pandas as pd
-import matplotlib.pyplot as plt
 import seaborn as sns
-from sklearn.model_selection import train_test_split, GridSearchCV
+import matplotlib.pyplot as plt
+from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler, LabelEncoder
 from sklearn.svm import SVC
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
+from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 
-# 1. Collect and Understand Data
+# Load the data from GitHub
 @st.cache_data
 def load_data():
     url = 'https://raw.githubusercontent.com/PEDAPATI-SAIVAMSI/END_TO_END_ML_PROJECT_HEART-DISESEAASE_PREDICTION/main/heart/heart.csv'
     data = pd.read_csv(url, on_bad_lines='skip')  # Skips bad lines
     return data
 
+# Exploratory Data Analysis (EDA)
 def eda(data):
     """Exploratory Data Analysis (EDA)"""
     st.subheader("Exploratory Data Analysis (EDA)")
@@ -28,80 +29,85 @@ def eda(data):
     sns.countplot(x='HeartDisease', data=data, palette='Set2')
     st.pyplot(plt)
 
-    # Correlation matrix
+    # Correlation matrix - only for numerical data
     st.write("Correlation Matrix")
+    numerical_data = data.select_dtypes(include=['int64', 'float64'])  # Select only numeric columns
     plt.figure(figsize=(10, 8))
-    sns.heatmap(data.corr(), annot=True, cmap='coolwarm', linewidths=0.5)
+    sns.heatmap(numerical_data.corr(), annot=True, cmap='coolwarm', linewidths=0.5)
     st.pyplot(plt)
 
     # Check for missing values
     st.write("Missing Values:", data.isnull().sum())
 
-# 2. Data Preprocessing
+# Preprocess the data
 def preprocess_data(df):
     label_encoders = {}
 
-    # Handle missing values
+    # Check for missing values in 'Sex' column and handle
+    st.write("Missing values in 'Sex':", df['Sex'].isnull().sum())
     df['Sex'].fillna('M', inplace=True)
-    
-    # Encoding categorical variables
+
+    # Encoding categorical columns
     le_sex = LabelEncoder()
+    le_sex.fit(['M', 'F'])
+    df['Sex'] = le_sex.transform(df['Sex'])
+    label_encoders['Sex'] = le_sex
+
     le_cp = LabelEncoder()
+    le_cp.fit(['TA', 'ATA', 'NAP', 'ASY'])
+    df['ChestPainType'] = le_cp.transform(df['ChestPainType'])
+    label_encoders['ChestPainType'] = le_cp
+
     le_recg = LabelEncoder()
+    le_recg.fit(['Normal', 'ST', 'LVH'])
+    df['RestingECG'] = le_recg.transform(df['RestingECG'])
+    label_encoders['RestingECG'] = le_recg
+
     le_ea = LabelEncoder()
+    le_ea.fit(['Y', 'N'])
+    df['ExerciseAngina'] = le_ea.transform(df['ExerciseAngina'])
+    label_encoders['ExerciseAngina'] = le_ea
+
     le_sts = LabelEncoder()
-
-    df['Sex'] = le_sex.fit_transform(df['Sex'])
-    df['ChestPainType'] = le_cp.fit_transform(df['ChestPainType'])
-    df['RestingECG'] = le_recg.fit_transform(df['RestingECG'])
-    df['ExerciseAngina'] = le_ea.fit_transform(df['ExerciseAngina'])
-    df['ST_Slope'] = le_sts.fit_transform(df['ST_Slope'])
-
-    label_encoders = {
-        'Sex': le_sex, 'ChestPainType': le_cp, 'RestingECG': le_recg, 
-        'ExerciseAngina': le_ea, 'ST_Slope': le_sts
-    }
+    le_sts.fit(['Up', 'Flat', 'Down'])
+    df['ST_Slope'] = le_sts.transform(df['ST_Slope'])
+    label_encoders['ST_Slope'] = le_sts
 
     return df, label_encoders
 
-# 3. Select and Train Models
+# Train the model
 def train_model(X_train, y_train, model_type):
     scaler = StandardScaler()
     X_train_scaled = scaler.fit_transform(X_train)
     
     if model_type == 'SVM':
         model = SVC(kernel='linear', probability=True)
-        param_grid = {'C': [0.1, 1, 10], 'kernel': ['linear', 'rbf']}
     elif model_type == 'Random Forest Classifier':
         model = RandomForestClassifier(n_estimators=100, random_state=42)
-        param_grid = {'n_estimators': [100, 200], 'max_depth': [5, 10, None]}
+    elif model_type == 'Random Forest Regressor':
+        model = RandomForestRegressor(n_estimators=100, random_state=42)
 
-    # Hyperparameter tuning with GridSearchCV
-    grid = GridSearchCV(model, param_grid, cv=5, n_jobs=-1)
-    grid.fit(X_train_scaled, y_train)
-    
-    return grid.best_estimator_, scaler
+    model.fit(X_train_scaled, y_train)
+    return model, scaler
 
-# 4. Evaluate Models
+# Evaluate model performance
 def evaluate_model(y_test, y_pred, model_choice):
-    accuracy = accuracy_score(y_test, y_pred)
-    st.write(f'Accuracy: {accuracy * 100:.2f}%')
-    st.write("Classification Report:")
-    st.text(classification_report(y_test, y_pred))
-    
-    # Confusion matrix
-    st.write("Confusion Matrix:")
-    cm = confusion_matrix(y_test, y_pred)
-    plt.figure(figsize=(5, 4))
-    sns.heatmap(cm, annot=True, fmt="d", cmap="Blues", xticklabels=['No Disease', 'Disease'], yticklabels=['No Disease', 'Disease'])
-    plt.xlabel('Predicted')
-    plt.ylabel('Actual')
-    st.pyplot(plt)
+    if model_choice != 'Random Forest Regressor':
+        accuracy = accuracy_score(y_test, y_pred)
+        precision = precision_score(y_test, y_pred)
+        recall = recall_score(y_test, y_pred)
+        f1 = f1_score(y_test, y_pred)
+        st.write(f"Model Accuracy: {accuracy * 100:.2f}%")
+        st.write(f"Precision: {precision:.2f}")
+        st.write(f"Recall: {recall:.2f}")
+        st.write(f"F1 Score: {f1:.2f}")
+    else:
+        st.write(f"Predictions: {y_pred}")
 
-# 5. Streamlit App
-st.title('Heart Disease Prediction - End-to-End ML Project')
+# Streamlit app
+st.title('Heart Disease Prediction')
 
-# Collect and Understand Data
+# Load and display data
 data = load_data()
 st.write('Dataset:', data.head())
 
@@ -117,25 +123,22 @@ y = data['HeartDisease']
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
 # Model selection
-model_choice = st.selectbox('Choose a model', ['SVM', 'Random Forest Classifier'])
+model_choice = st.selectbox('Choose a model', ['SVM', 'Random Forest Classifier', 'Random Forest Regressor'])
 
-# Model Training
+# Train the model
 model, scaler = train_model(X_train, y_train, model_choice)
 
-# Model Prediction
+# Make predictions
 X_test_scaled = scaler.transform(X_test)
 y_pred = model.predict(X_test_scaled)
 
-# Evaluate the Model
+# Evaluate the model
 evaluate_model(y_test, y_pred, model_choice)
 
-# 6. Optimize and Tune
-st.subheader("Model Optimization")
-st.write("Best Hyperparameters:")
-st.write(model.get_params())
-
-# 7. Predict using User Input
+# Prediction section
 st.header('Predict Heart Disease')
+
+# User input for prediction
 age = st.slider('Age', min_value=20, max_value=100, value=50)
 sex = st.selectbox('Sex', options=['M', 'F'])
 chest_pain = st.selectbox('Chest Pain Type', options=['TA', 'ATA', 'NAP', 'ASY'])
@@ -148,7 +151,7 @@ exercise_angina = st.selectbox('Exercise-induced Angina', options=['Y', 'N'])
 oldpeak = st.slider('Oldpeak', min_value=0.0, max_value=6.0, value=1.0)
 st_slope = st.selectbox('ST Slope', options=['Up', 'Flat', 'Down'])
 
-# Convert inputs to DataFrame
+# Convert inputs to a dataframe
 input_data = pd.DataFrame({
     'Age': [age],
     'Sex': [label_encoders['Sex'].transform([sex])[0]],
@@ -163,13 +166,18 @@ input_data = pd.DataFrame({
     'ST_Slope': [label_encoders['ST_Slope'].transform([st_slope])[0]]
 })
 
-# Scale and Predict
+# Scale the input data
 input_data_scaled = scaler.transform(input_data)
+
+# Make prediction
 prediction = model.predict(input_data_scaled)
 
-# Display Prediction
-st.subheader('Prediction Result')
-if prediction[0] == 1:
-    st.write('The model predicts that the patient **has heart disease**.')
-else:
-    st.write('The model predicts that the patient **does not have heart disease**.')
+# Display the prediction result
+st.subheader('Prediction')
+if model_choice != 'Random Forest Regressor':
+    prediction_proba = model.predict_proba(input_data_scaled)
+    if prediction[0] == 1:
+        st.write('The model predicts that the patient **has heart disease**.')
+    else:
+        st.write('The model predicts that the patient **does not have heart disease**.')
+    st.write(f'Probability of having heart disease: {prediction_proba[0][1] * 100:.2f}%')
