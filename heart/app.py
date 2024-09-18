@@ -5,50 +5,53 @@ from sklearn.preprocessing import StandardScaler, LabelEncoder
 from sklearn.svm import SVC
 from sklearn.metrics import accuracy_score
 
-
 # Load the data from GitHub
 @st.cache_data
 def load_data():
-    url = 'https://github.com/PEDAPATI-SAIVAMSI/END_TO_END_ML_PROJECT_HEART-DISESEAASE_PREDICTION/blob/3b68175e7480cbc75a22999e386ce75bcbe60a8b/heart/heart.csv'  # Replace with your actual raw URL
-    data = pd.read_csv(url,on_bad_lines="skip")
+    url = 'https://raw.githubusercontent.com/PEDAPATI-SAIVAMSI/END_TO_END_ML_PROJECT_HEART-DISESEAASE_PREDICTION/main/heart/heart.csv'
+    data = pd.read_csv(url, on_bad_lines='skip')  # Skips bad lines
     return data
 
-# Rest of your code remains the same...
-
-  # Update the file path if needed
-    return data
-
-# Encode categorical columns with predefined categories
+# Preprocess the data
 def preprocess_data(df):
     label_encoders = {}
 
+    # Check for missing values in 'Sex' column
+    st.write("Missing values in 'Sex':", df['Sex'].isnull().sum())
+    
+    # If missing values, fill them (replace 'M' with appropriate handling if needed)
+    df['Sex'].fillna('M', inplace=True)
+    
+    # Log unique values in 'Sex' column
+    st.write("Unique values in 'Sex':", df['Sex'].unique())
+
     # Encoding 'Sex' column
     le_sex = LabelEncoder()
-    le_sex.fit(['M', 'F'])  # Male (M), Female (F)
+    le_sex.fit(['M', 'F'])
     df['Sex'] = le_sex.transform(df['Sex'])
     label_encoders['Sex'] = le_sex
 
     # Encoding 'ChestPainType' column
     le_cp = LabelEncoder()
-    le_cp.fit(['TA', 'ATA', 'NAP', 'ASY'])  # Typical Angina (TA), Atypical Angina (ATA), Non-anginal Pain (NAP), Asymptomatic (ASY)
+    le_cp.fit(['TA', 'ATA', 'NAP', 'ASY'])
     df['ChestPainType'] = le_cp.transform(df['ChestPainType'])
     label_encoders['ChestPainType'] = le_cp
 
     # Encoding 'RestingECG' column
     le_recg = LabelEncoder()
-    le_recg.fit(['Normal', 'ST', 'LVH'])  # Normal, ST-T wave abnormality (ST), Left ventricular hypertrophy (LVH)
+    le_recg.fit(['Normal', 'ST', 'LVH'])
     df['RestingECG'] = le_recg.transform(df['RestingECG'])
     label_encoders['RestingECG'] = le_recg
 
     # Encoding 'ExerciseAngina' column
     le_ea = LabelEncoder()
-    le_ea.fit(['Y', 'N'])  # Yes (Y), No (N)
+    le_ea.fit(['Y', 'N'])
     df['ExerciseAngina'] = le_ea.transform(df['ExerciseAngina'])
     label_encoders['ExerciseAngina'] = le_ea
 
     # Encoding 'ST_Slope' column
     le_sts = LabelEncoder()
-    le_sts.fit(['Up', 'Flat', 'Down'])  # Upsloping (Up), Flat, Downsloping (Down)
+    le_sts.fit(['Up', 'Flat', 'Down'])
     df['ST_Slope'] = le_sts.transform(df['ST_Slope'])
     label_encoders['ST_Slope'] = le_sts
 
